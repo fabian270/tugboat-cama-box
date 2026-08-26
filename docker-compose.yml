@@ -6,36 +6,11 @@ services:
     volumes:
       - ./site:/var/www/html
       - ./api:/var/www/html/api
-    depends_on:
-      db:
-        condition: service_healthy
-    env_file:
-      - .env
-
-  adminer:
-    image: adminer:latest
-    ports:
-      - "8080:8080"
-    depends_on:
-      db:
-        condition: service_healthy
+      - ./db:/var/www/html/db
+      - ./data:/var/www/html/data
     environment:
-      ADMINER_DEFAULT_SERVER: db
-
-  db:
-    image: mariadb:11
-    ports:
-      - "3306:3306"
-    env_file:
-      - .env
-    volumes:
-      - db_data:/var/lib/mysql
-      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql
-    healthcheck:
-      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
+      DB_TYPE: sqlite
+      DB_PATH: /var/www/html/data/camabox.db
 
 volumes:
   db_data:
