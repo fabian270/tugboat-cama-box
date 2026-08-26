@@ -48,20 +48,37 @@ function getProducts($pdo) {
 
 function saveProduct($pdo, $data) {
     $id = $data['id'] ?? bin2hex(random_bytes(8));
-    $stmt = $pdo->prepare('INSERT INTO products (id,name,location,price,url,images,drawers,shoe_rack,inner_storage,shelf,closures,size_type,dimensions,assembly,manual,assembly_place,is_new)
-        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-        ON DUPLICATE KEY UPDATE name=VALUES(name),location=VALUES(location),price=VALUES(price),url=VALUES(url),images=VALUES(images),
-        drawers=VALUES(drawers),shoe_rack=VALUES(shoe_rack),inner_storage=VALUES(inner_storage),shelf=VALUES(shelf),closures=VALUES(closures),
-        size_type=VALUES(size_type),dimensions=VALUES(dimensions),assembly=VALUES(assembly),manual=VALUES(manual),assembly_place=VALUES(assembly_place),is_new=VALUES(is_new)');
+    $isSqlite = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite';
 
-    $stmt->execute([
+    $vals = [
         $id, $data['name'] ?? '', $data['location'] ?? '', $data['price'] ?? 0, $data['url'] ?? '',
         json_encode($data['images'] ?? []), (int)($data['drawers'] ?? 0),
         (int)($data['shoeRack'] ?? 0), (int)($data['innerStorage'] ?? 0), (int)($data['shelf'] ?? 0),
         json_encode($data['closures'] ?? []), $data['sizeType'] ?? '', $data['dimensions'] ?? '',
         $data['assembly'] ?? '', (int)($data['manual'] ?? 0), $data['assemblyPlace'] ?? '',
         (int)($data['isNew'] ?? 1)
-    ]);
+    ];
+
+    if ($isSqlite) {
+        $existing = $pdo->prepare('SELECT id FROM products WHERE id = ?');
+        $existing->execute([$id]);
+        if ($existing->fetch()) {
+            $stmt = $pdo->prepare('UPDATE products SET name=?,location=?,price=?,url=?,images=?,drawers=?,shoe_rack=?,inner_storage=?,shelf=?,closures=?,size_type=?,dimensions=?,assembly=?,manual=?,assembly_place=?,is_new=? WHERE id=?');
+            array_shift($vals);
+            $vals[] = $id;
+            $stmt->execute($vals);
+        } else {
+            $stmt = $pdo->prepare('INSERT INTO products (id,name,location,price,url,images,drawers,shoe_rack,inner_storage,shelf,closures,size_type,dimensions,assembly,manual,assembly_place,is_new) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+            $stmt->execute($vals);
+        }
+    } else {
+        $stmt = $pdo->prepare('INSERT INTO products (id,name,location,price,url,images,drawers,shoe_rack,inner_storage,shelf,closures,size_type,dimensions,assembly,manual,assembly_place,is_new)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ON DUPLICATE KEY UPDATE name=VALUES(name),location=VALUES(location),price=VALUES(price),url=VALUES(url),images=VALUES(images),
+            drawers=VALUES(drawers),shoe_rack=VALUES(shoe_rack),inner_storage=VALUES(inner_storage),shelf=VALUES(shelf),closures=VALUES(closures),
+            size_type=VALUES(size_type),dimensions=VALUES(dimensions),assembly=VALUES(assembly),manual=VALUES(manual),assembly_place=VALUES(assembly_place),is_new=VALUES(is_new)');
+        $stmt->execute($vals);
+    }
 
     $pdo->prepare('DELETE FROM product_colors WHERE product_id = ?')->execute([$id]);
     $ins = $pdo->prepare('INSERT INTO product_colors (product_id,hex,name) VALUES (?,?,?)');
