@@ -8,7 +8,6 @@ services:
       DB_PATH: /tmp/camabox.db
     commands:
       init:
-        - docker-php-ext-install pdo pdo_sqlite
         - a2enmod rewrite
         - ln -snf "${TUGBOAT_ROOT}/site" "${DOCROOT}"
         - cp "${TUGBOAT_ROOT}/docker/apache-vhost.conf" /etc/apache2/sites-available/000-default.conf
