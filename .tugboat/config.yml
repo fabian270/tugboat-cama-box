@@ -1,16 +1,17 @@
 services:
   apache:
-    image: tugboatqa/php:apache-trixie
+    image: tugboatqa/php:8.2-apache
     default: true
     symlink: false
     environment:
       DB_TYPE: sqlite
-      DB_PATH: /tmp/camabox.db
+      DB_PATH: /var/www/html/data/camabox.db
     commands:
       init:
-        - apt-get update && apt-get install -y libsqlite3-dev sqlite3 && docker-php-ext-install pdo_sqlite
+        - apt-get update && apt-get install -y sqlite3 php-sqlite3
         - a2enmod rewrite
+        - mkdir -p /var/www/html/data && chmod 777 /var/www/html/data
         - ln -snf "${TUGBOAT_ROOT}/site" "${DOCROOT}"
         - cp "${TUGBOAT_ROOT}/docker/apache-vhost.conf" /etc/apache2/sites-available/000-default.conf
         - cp -r "${TUGBOAT_ROOT}/api" "${DOCROOT}/api"
-        - php -r "\$db=new SQLite3('/tmp/camabox.db');\$db->exec(file_get_contents('${TUGBOAT_ROOT}/db/schema.sqlite.sql'));"
+        - sqlite3 /var/www/html/data/camabox.db < "${TUGBOAT_ROOT}/db/schema.sqlite.sql"
