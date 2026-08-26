@@ -1,6 +1,7 @@
 services:
   apache:
     image: tugboatqa/php:apache-trixie
+    default: true
     symlink: false
     commands:
       init:
