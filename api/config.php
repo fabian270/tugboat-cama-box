@@ -9,7 +9,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') { http_response_code(204); exit; }
 $dbType = getenv('DB_TYPE') ?: 'mysql';
 
 if ($dbType === 'sqlite') {
-    $dbPath = getenv('DB_PATH') ?: '/tmp/camabox.db';
+    $dbPath = getenv('DB_PATH') ?: '/var/www/html/data/camabox.db';
     $pdo = new PDO('sqlite:' . $dbPath);
     $pdo->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
