@@ -383,10 +383,10 @@
 <body>
     <header>
         <div class="header-inner">
-            <div class="logo">Cama<span>Box</span> Pro</div>
+            <div class="logo">Cama<span>Box</span></div>
             <div class="header-actions">
                 <input type="text" class="search-bar" id="searchInput" placeholder="Buscar productos...">
-                <button class="btn btn-outline" onclick="exportData()">↓ Exportar</button>
+                
                 <a href="admin.php" class="btn btn-accent" style="text-decoration:none">⚙ Administrar</a>
             </div>
         </div>
