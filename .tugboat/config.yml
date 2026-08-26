@@ -1,6 +1,8 @@
 services:
   apache:
-    image: tugboatqa/php:8.2-apache
+    build:
+      context: ..
+      dockerfile: .tugboat/Dockerfile
     default: true
     symlink: false
     environment:
@@ -8,8 +10,6 @@ services:
       DB_PATH: /var/www/html/data/camabox.db
     commands:
       init:
-        - apt-get update --allow-releaseinfo-change || apt-get update
-        - apt-get install -y sqlite3 php-sqlite3
         - a2enmod rewrite
         - mkdir -p /var/www/html/data && chmod 777 /var/www/html/data
         - ln -snf "${TUGBOAT_ROOT}/site" "${DOCROOT}"
