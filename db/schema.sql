@@ -46,3 +46,13 @@ CREATE TABLE IF NOT EXISTS product_dynamic_features (
     FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
     UNIQUE KEY uk_prod_char (product_id, characteristic_name)
 ) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(100) NOT NULL UNIQUE,
+    password_hash VARCHAR(255) NOT NULL,
+    role ENUM('admin','editor') NOT NULL DEFAULT 'editor',
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB;
+
+INSERT IGNORE INTO users (username, password_hash, role) VALUES ('admin', '$2y$10$LmSqci180Ie25D1ELzmVxOtcbW3WAE2By3EJnRHBMB77Hq0U0HXWG', 'admin');

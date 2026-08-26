@@ -1,6 +1,33 @@
 services:
   apache:
     image: tugboatqa/php:apache-trixie
+    symlink: false
     commands:
       init:
+        - docker-php-ext-install pdo pdo_mysql
+        - a2enmod rewrite
         - ln -snf "${TUGBOAT_ROOT}/site" "${DOCROOT}"
+        - cp "${TUGBOAT_ROOT}/docker/apache-vhost.conf" /etc/apache2/sites-available/000-default.conf
+        - cp -r "${TUGBOAT_ROOT}/api" "${DOCROOT}/api"
+    hosts:
+      - database: db
+
+  db:
+    image: mariadb:11
+    persistent: /var/lib/mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: "${MYSQL_ROOT_PASSWORD}"
+      MYSQL_DATABASE: "${MYSQL_DATABASE}"
+      MYSQL_USER: "${MYSQL_USER}"
+      MYSQL_PASSWORD: "${MYSQL_PASSWORD}"
+    commands:
+      init:
+        - cp "${TUGBOAT_ROOT}/db/schema.sql" /docker-entrypoint-initdb.d/01-schema.sql
+        - ls /docker-entrypoint-initdb.d/
+
+  adminer:
+    image: adminer:latest
+    hosts:
+      - database: db
+    environment:
+      ADMINER_DEFAULT_SERVER: db

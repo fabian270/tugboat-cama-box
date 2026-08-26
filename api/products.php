@@ -1,31 +1,46 @@
 <?php
 require __DIR__ . '/config.php';
+require __DIR__ . '/middleware.php';
 
 function getProducts($pdo) {
     $stmt = $pdo->query('SELECT * FROM products ORDER BY created_at DESC');
-    $products = $stmt->fetchAll();
+    $rows = $stmt->fetchAll();
+    $products = [];
 
-    foreach ($products as &$p) {
-        $p['images'] = json_decode($p['images'] ?? '[]', true);
-        $p['closures'] = json_decode($p['closures'] ?? '[]', true);
-        $p['drawers'] = (int)$p['drawers'];
-        $p['price'] = (float)$p['price'];
-        $p['shoe_rack'] = (bool)$p['shoe_rack'];
-        $p['inner_storage'] = (bool)$p['inner_storage'];
-        $p['shelf'] = (bool)$p['shelf'];
-        $p['manual'] = (bool)$p['manual'];
-        $p['is_new'] = (bool)$p['is_new'];
+    foreach ($rows as $p) {
+        $item = [
+            'id' => $p['id'],
+            'name' => $p['name'],
+            'location' => $p['location'],
+            'price' => (float)$p['price'],
+            'url' => $p['url'],
+            'images' => json_decode($p['images'] ?? '[]', true),
+            'drawers' => (int)$p['drawers'],
+            'shoeRack' => (bool)$p['shoe_rack'],
+            'innerStorage' => (bool)$p['inner_storage'],
+            'shelf' => (bool)$p['shelf'],
+            'closures' => json_decode($p['closures'] ?? '[]', true),
+            'sizeType' => $p['size_type'],
+            'dimensions' => $p['dimensions'],
+            'assembly' => $p['assembly'],
+            'manual' => (bool)$p['manual'],
+            'assemblyPlace' => $p['assembly_place'],
+            'isNew' => (bool)$p['is_new'],
+            'colors' => [],
+            'dynamicFeatures' => [],
+        ];
 
         $colors = $pdo->prepare('SELECT hex, name FROM product_colors WHERE product_id = ?');
         $colors->execute([$p['id']]);
-        $p['colors'] = $colors->fetchAll();
+        $item['colors'] = $colors->fetchAll();
 
         $feat = $pdo->prepare('SELECT characteristic_name, value FROM product_dynamic_features WHERE product_id = ?');
         $feat->execute([$p['id']]);
-        $p['dynamic_features'] = [];
         foreach ($feat->fetchAll() as $f) {
-            $p['dynamic_features'][$f['characteristic_name']] = $f['value'];
+            $item['dynamicFeatures'][$f['characteristic_name']] = $f['value'];
         }
+
+        $products[] = $item;
     }
 
     return $products;
@@ -40,12 +55,12 @@ function saveProduct($pdo, $data) {
         size_type=VALUES(size_type),dimensions=VALUES(dimensions),assembly=VALUES(assembly),manual=VALUES(manual),assembly_place=VALUES(assembly_place),is_new=VALUES(is_new)');
 
     $stmt->execute([
-        $id, $data['name'], $data['location'] ?? '', $data['price'] ?? 0, $data['url'] ?? '',
-        json_encode($data['images'] ?? []), $data['drawers'] ?? 0,
-        $data['shoeRack'] ?? 0, $data['innerStorage'] ?? 0, $data['shelf'] ?? 0,
+        $id, $data['name'] ?? '', $data['location'] ?? '', $data['price'] ?? 0, $data['url'] ?? '',
+        json_encode($data['images'] ?? []), (int)($data['drawers'] ?? 0),
+        (int)($data['shoeRack'] ?? 0), (int)($data['innerStorage'] ?? 0), (int)($data['shelf'] ?? 0),
         json_encode($data['closures'] ?? []), $data['sizeType'] ?? '', $data['dimensions'] ?? '',
-        $data['assembly'] ?? '', $data['manual'] ?? 0, $data['assemblyPlace'] ?? '',
-        $data['isNew'] ?? 1
+        $data['assembly'] ?? '', (int)($data['manual'] ?? 0), $data['assemblyPlace'] ?? '',
+        (int)($data['isNew'] ?? 1)
     ]);
 
     $pdo->prepare('DELETE FROM product_colors WHERE product_id = ?')->execute([$id]);
@@ -70,36 +85,44 @@ function deleteProduct($pdo, $id) {
 $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
 
-switch ($method) {
-    case 'GET':
-        echo json_encode(getProducts($pdo));
-        break;
-    case 'POST':
-        if (!empty($input['name'])) {
-            $id = saveProduct($pdo, $input);
-            echo json_encode(['id' => $id, 'status' => 'ok']);
-        } else {
-            http_response_code(400);
-            echo json_encode(['error' => 'name required']);
-        }
-        break;
-    case 'PUT':
-        if (!empty($input['id'])) {
-            saveProduct($pdo, $input);
-            echo json_encode(['status' => 'ok']);
-        } else {
-            http_response_code(400);
-            echo json_encode(['error' => 'id required']);
-        }
-        break;
-    case 'DELETE':
-        $id = $_GET['id'] ?? '';
-        if ($id) {
-            deleteProduct($pdo, $id);
-            echo json_encode(['status' => 'ok']);
-        } else {
-            http_response_code(400);
-            echo json_encode(['error' => 'id required']);
-        }
-        break;
+try {
+    switch ($method) {
+        case 'GET':
+            echo json_encode(getProducts($pdo));
+            break;
+        case 'POST':
+            requireAuth();
+            if (!empty($input['name'])) {
+                $id = saveProduct($pdo, $input);
+                echo json_encode(['id' => $id, 'status' => 'ok']);
+            } else {
+                http_response_code(400);
+                echo json_encode(['error' => 'name required']);
+            }
+            break;
+        case 'PUT':
+            requireAuth();
+            if (!empty($input['id'])) {
+                saveProduct($pdo, $input);
+                echo json_encode(['status' => 'ok']);
+            } else {
+                http_response_code(400);
+                echo json_encode(['error' => 'id required']);
+            }
+            break;
+        case 'DELETE':
+            requireAuth();
+            $id = $_GET['id'] ?? '';
+            if ($id) {
+                deleteProduct($pdo, $id);
+                echo json_encode(['status' => 'ok']);
+            } else {
+                http_response_code(400);
+                echo json_encode(['error' => 'id required']);
+            }
+            break;
+    }
+} catch (Exception $e) {
+    http_response_code(500);
+    echo json_encode(['error' => 'Server error: ' . $e->getMessage()]);
 }

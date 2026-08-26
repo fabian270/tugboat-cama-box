@@ -1,5 +1,6 @@
 <?php
 require __DIR__ . '/config.php';
+require __DIR__ . '/middleware.php';
 
 $method = $_SERVER['REQUEST_METHOD'];
 $input = json_decode(file_get_contents('php://input'), true) ?: [];
@@ -10,6 +11,7 @@ switch ($method) {
         echo json_encode($stmt->fetchAll());
         break;
     case 'POST':
+        requireAuth();
         $name = $input['name'] ?? '';
         $type = $input['type'] ?? 'text';
         $options = $input['options'] ?? null;
@@ -23,6 +25,7 @@ switch ($method) {
         echo json_encode(['status' => 'ok']);
         break;
     case 'DELETE':
+        requireAuth();
         $name = $_GET['name'] ?? '';
         if (!$name) { http_response_code(400); echo json_encode(['error' => 'name required']); break; }
         $pdo->prepare('DELETE FROM custom_characteristics WHERE name = ?')->execute([$name]);
