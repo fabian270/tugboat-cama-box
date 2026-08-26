@@ -1,6 +1,6 @@
 # Cama Box Pro
 
-Aplicación web para gestionar y comparar productos de **camas box** con estilo ecommerce. Permite organizar un catálogo completo de productos con todas sus especificaciones técnicas y generar tablas comparativas.
+Aplicación web para gestionar y comparar productos de **camas box** con estilo ecommerce. Backend PHP + MariaDB con Docker.
 
 ## Características
 
@@ -8,6 +8,7 @@ Aplicación web para gestionar y comparar productos de **camas box** con estilo 
 - **Alta, baja y edición** de productos cama box
 - **Fotos múltiples** por producto con carrusel de navegación
 - **Colores personalizados** con selector hex y nombre
+- **URL del sitio** por producto
 - **Búsqueda en tiempo real** por nombre, ubicación o tipo
 
 ### Especificaciones Técnicas
@@ -35,45 +36,108 @@ Aplicación web para gestionar y comparar productos de **camas box** con estilo 
 - **Cuadrícula**: Tarjetas estilo ecommerce con imagen, precio, specs y colores
 - **Tabla**: Vista tabular completa con todas las columnas
 
-### Persistencia y Portabilidad
-- **localStorage**: Los datos se guardan automáticamente en el navegador
-- **Exportar**: Descarga un archivo JSON con todos los productos y características
-- **Importar**: Carga un archivo JSON de backup
+### Export / Import
+- **Exportar**: Descarga un archivo JSON con todos los productos y características desde MariaDB
+- **Importar**: Carga un archivo JSON de backup (reemplaza todos los datos en MariaDB)
 - **Datos de ejemplo**: Botón para cargar 4 productos de demostración
+
+## Stack Tecnológico
+
+| Componente | Tecnología |
+|---|---|
+| **Frontend** | HTML5, CSS3, JavaScript vanilla |
+| **Backend API** | PHP 8.2 |
+| **Servidor web** | Apache |
+| **Base de datos** | MariaDB 11 |
+| **Containerización** | Docker + Docker Compose |
 
 ## Estructura del Proyecto
 
 ```
 tugboat-cama-box/
+├── .htaccess                    # Reescritura de URLs raíz
 ├── .tugboat/
-│   └── config.yml          # Configuración de Tugboat previews
+│   └── config.yml               # Configuración de Tugboat previews
+├── docker/
+│   └── apache-vhost.conf        # Configuración VirtualHost de Apache
+├── db/
+│   └── schema.sql               # Esquema de la base de datos
+├── api/
+│   ├── .htaccess                # Reescritura de URLs para API
+│   ├── config.php               # Conexión a MariaDB + CORS
+│   ├── products.php             # CRUD de productos (GET/POST/PUT/DELETE)
+│   ├── characteristics.php      # CRUD de características personalizadas
+│   ├── export.php               # Exportar todos los datos como JSON
+│   ├── import.php               # Importar datos desde JSON
+│   └── health.php               # Health check del API
 ├── site/
-│   └── index.html          # Aplicación principal (HTML + CSS + JS)
-└── README.md               # Este archivo
+│   └── index.html               # Frontend (HTML + CSS + JS)
+├── docker-compose.yml           # Servicios: web + db
+├── Dockerfile                   # Imagen PHP-Apache
+└── README.md
 ```
 
-## Uso
+## Inicio Rápido
 
-### Local
-Abrí `site/index.html` directamente en cualquier navegador moderno. No requiere servidor ni dependencias.
+### Requisitos
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) instalado y ejecutándose
 
-### Con Tugboat
-El proyecto está configurado para desplegarse automáticamente con [Tugboat](https://tugboatqa.com). Al hacer push a una rama, Tugboat genera una preview URL con el sitio funcionando.
+### Ejecutar
 
-**Configuración de Tugboat** (`.tugboat/config.yml`):
-- Servicio: Apache (`tugboatqa/php:apache-trixie`)
-- Document root enlazado al directorio `site/`
+```bash
+docker compose up -d --build
+```
 
-## Tecnologías
+La app estará disponible en: **http://localhost:8080**
 
-- **HTML5** — Estructura semántica
-- **CSS3** — Diseño responsive con variables custom, grid y flexbox
-- **JavaScript vanilla** — Sin dependencias externas
-- **localStorage** — Persistencia del lado del cliente
+### Parar
+
+```bash
+docker compose down
+```
+
+### Reiniciar con datos frescos
+
+```bash
+docker compose down -v
+docker compose up -d --build
+```
+
+## API REST
+
+| Endpoint | Método | Descripción |
+|---|---|---|
+| `/api/products.php` | GET | Obtener todos los productos |
+| `/api/products.php` | POST | Crear un producto |
+| `/api/products.php` | PUT | Actualizar un producto |
+| `/api/products.php?id=X` | DELETE | Eliminar un producto |
+| `/api/characteristics.php` | GET | Obtener características |
+| `/api/characteristics.php` | POST | Crear característica |
+| `/api/characteristics.php?name=X` | DELETE | Eliminar característica |
+| `/api/export.php` | GET | Exportar todos los datos |
+| `/api/import.php` | POST | Importar datos completos |
+| `/api/health.php` | GET | Health check |
+
+## Base de Datos
+
+### Tablas
+
+- **products** — Producto principal (nombre, precio, URL, medidas, etc.)
+- **product_colors** — Colores disponibles por producto
+- **custom_characteristics** — Características personalizadas globales
+- **product_dynamic_features** — Valores de características por producto
+
+El esquema se crea automáticamente al iniciar Docker gracias a `db/schema.sql`.
+
+## Despliegue
+
+### Tugboat
+Configurado para previews automáticos. Push a una rama y se genera la preview URL.
+
+### Producción
+El `Dockerfile` y `docker-compose.yml` pueden adaptarse a cualquier infraestructura Docker (AWS ECS, DigitalOcean App Platform, etc.).
 
 ## Formato de Datos (JSON)
-
-Al exportar, el archivo tiene esta estructura:
 
 ```json
 {
@@ -83,6 +147,7 @@ Al exportar, el archivo tiene esta estructura:
       "name": "string",
       "location": "string",
       "price": 0,
+      "url": "https://...",
       "images": ["base64..."],
       "colors": [{ "hex": "#000", "name": "Negro" }],
       "drawers": 0,

@@ -1185,6 +1185,10 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
+        // API BASE
+        const API_BASE = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+            ? '/api' : window.location.origin + '/api';
+
         // DATA STORE
         let products = [];
         let customCharacteristics = [];
@@ -1198,26 +1202,30 @@
         // INIT
         function init() {
             loadData();
-            render();
             setupSearch();
             setupDragDrop();
         }
 
-        function loadData() {
+        async function apiCall(endpoint, method, body) {
+            const opts = { method, headers: { 'Content-Type': 'application/json' } };
+            if (body) opts.body = JSON.stringify(body);
             try {
-                const saved = localStorage.getItem('camabox_products');
-                if (saved) products = JSON.parse(saved);
-                const savedChars = localStorage.getItem('camabox_chars');
-                if (savedChars) customCharacteristics = JSON.parse(savedChars);
+                const res = await fetch(`${API_BASE}/${endpoint}`, opts);
+                return await res.json();
             } catch(e) {
-                products = [];
-                customCharacteristics = [];
+                showToast('Error de conexión con el servidor', 'error');
+                return null;
             }
         }
 
-        function saveData() {
-            localStorage.setItem('camabox_products', JSON.stringify(products));
-            localStorage.setItem('camabox_chars', JSON.stringify(customCharacteristics));
+        async function loadData() {
+            const [prods, chars] = await Promise.all([
+                apiCall('products.php', 'GET'),
+                apiCall('characteristics.php', 'GET')
+            ]);
+            if (prods !== null) products = prods;
+            if (chars !== null) customCharacteristics = chars;
+            render();
         }
 
         function generateId() {
@@ -1613,7 +1621,7 @@
         }
 
         // SAVE PRODUCT
-        function saveProduct() {
+        async function saveProduct() {
             const name = document.getElementById('prodName').value.trim();
             if (!name) { showToast('El nombre es obligatorio', 'error'); return; }
 
@@ -1633,8 +1641,9 @@
                 }
             });
 
+            const editId = document.getElementById('editProductId').value;
             const product = {
-                id: document.getElementById('editProductId').value || generateId(),
+                id: editId || generateId(),
                 name,
                 location: document.getElementById('prodLocation').value.trim(),
                 price: parseFloat(document.getElementById('prodPrice').value) || 0,
@@ -1652,34 +1661,30 @@
                 manual: document.getElementById('prodManual').value === 'true',
                 assemblyPlace: document.getElementById('prodAssemblyPlace').value.trim(),
                 dynamicFeatures,
-                isNew: !document.getElementById('editProductId').value
+                isNew: editId ? (products.find(p => p.id === editId)?.isNew ?? true) : true
             };
 
-            const existingIdx = products.findIndex(p => p.id === product.id);
-            if (existingIdx >= 0) {
-                product.isNew = products[existingIdx].isNew;
-                products[existingIdx] = product;
-            } else {
-                products.push(product);
+            const method = editId ? 'PUT' : 'POST';
+            const result = await apiCall('products.php', method, product);
+            if (result && result.status === 'ok') {
+                await loadData();
+                closeProductModal();
+                showToast(editId ? 'Producto actualizado' : 'Producto agregado', 'success');
             }
-
-            saveData();
-            render();
-            closeProductModal();
-            showToast(existingIdx >= 0 ? 'Producto actualizado' : 'Producto agregado', 'success');
         }
 
         function editProduct(id) {
             openProductModal(id);
         }
 
-        function deleteProduct(id) {
+        async function deleteProduct(id) {
             if (!confirm('¿Eliminar este producto?')) return;
-            products = products.filter(p => p.id !== id);
-            compareList = compareList.filter(cId => cId !== id);
-            saveData();
-            render();
-            showToast('Producto eliminado', 'info');
+            const result = await apiCall('products.php?id=' + encodeURIComponent(id), 'DELETE');
+            if (result && result.status === 'ok') {
+                compareList = compareList.filter(cId => cId !== id);
+                await loadData();
+                showToast('Producto eliminado', 'info');
+            }
         }
 
         // COMPARE
@@ -1779,7 +1784,7 @@
             });
         });
 
-        function addCharacteristic() {
+        async function addCharacteristic() {
             const name = document.getElementById('newCharName').value.trim();
             if (!name) { showToast('Ingresa un nombre', 'error'); return; }
 
@@ -1791,32 +1796,21 @@
             const type = document.getElementById('newCharType').value;
             const options = document.getElementById('newCharOptions').value;
 
-            customCharacteristics.push({ name, type, options });
-
-            products.forEach(p => {
-                if (!p.dynamicFeatures) p.dynamicFeatures = {};
-                if (p.dynamicFeatures[name] === undefined) {
-                    p.dynamicFeatures[name] = type === 'boolean' ? 'false' : '';
-                }
-            });
-
-            saveData();
-            renderCharList();
-            render();
-            document.getElementById('newCharName').value = '';
-            showToast(`Característica "${name}" agregada a todos los productos`, 'success');
+            const result = await apiCall('characteristics.php', 'POST', { name, type, options });
+            if (result && result.status === 'ok') {
+                await loadData();
+                document.getElementById('newCharName').value = '';
+                showToast(`Característica "${name}" agregada a todos los productos`, 'success');
+            }
         }
 
-        function removeCharacteristic(name) {
+        async function removeCharacteristic(name) {
             if (!confirm(`Eliminar "${name}" de todos los productos?`)) return;
-            customCharacteristics = customCharacteristics.filter(c => c.name !== name);
-            products.forEach(p => {
-                if (p.dynamicFeatures) delete p.dynamicFeatures[name];
-            });
-            saveData();
-            renderCharList();
-            render();
-            showToast('Característica eliminada', 'info');
+            const result = await apiCall('characteristics.php?name=' + encodeURIComponent(name), 'DELETE');
+            if (result && result.status === 'ok') {
+                await loadData();
+                showToast('Característica eliminada', 'info');
+            }
         }
 
         function renderCharList() {
@@ -1853,8 +1847,9 @@
         }
 
         // EXPORT / IMPORT
-        function exportData() {
-            const data = { products, customCharacteristics };
+        async function exportData() {
+            const data = await apiCall('export.php', 'GET');
+            if (!data) return;
             const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -1865,18 +1860,18 @@
             showToast('Datos exportados', 'success');
         }
 
-        function importData(event) {
+        async function importData(event) {
             const file = event.target.files[0];
             if (!file) return;
             const reader = new FileReader();
-            reader.onload = function(e) {
+            reader.onload = async function(e) {
                 try {
                     const data = JSON.parse(e.target.result);
-                    if (data.products) products = data.products;
-                    if (data.customCharacteristics) customCharacteristics = data.customCharacteristics;
-                    saveData();
-                    render();
-                    showToast('Datos importados correctamente', 'success');
+                    const result = await apiCall('import.php', 'POST', data);
+                    if (result && result.status === 'ok') {
+                        await loadData();
+                        showToast(`Datos importados: ${result.count} productos`, 'success');
+                    }
                 } catch(err) {
                     showToast('Error al importar archivo', 'error');
                 }
@@ -1885,134 +1880,137 @@
         }
 
         // DEMO DATA
-        function loadDemoData() {
+        async function loadDemoData() {
             if (products.length > 0 && !confirm('Esto reemplazará los productos actuales. ¿Continuar?')) return;
 
-            customCharacteristics = [
-                { name: 'Material Tapizado', type: 'select', options: 'Lino, Algodón, Poliéster, Terciopelo' },
-                { name: 'Resistente a Manchas', type: 'boolean', options: '' },
-                { name: 'Garantía (meses)', type: 'number', options: '' }
-            ];
+            const demoData = {
+                customCharacteristics: [
+                    { name: 'Material Tapizado', type: 'select', options: 'Lino, Algodón, Poliéster, Terciopelo' },
+                    { name: 'Resistente a Manchas', type: 'boolean', options: '' },
+                    { name: 'Garantía (meses)', type: 'number', options: '' }
+                ],
+                products: [
+                    {
+                        id: generateId(),
+                        name: 'Cama Box Queen Premium',
+                        location: 'Sucursal Centro',
+                        price: 185000,
+                        url: 'https://ejemplo.com/cama-queen-premium',
+                        images: [],
+                        colors: [
+                            { hex: '#2c3e50', name: 'Gris Oscuro' },
+                            { hex: '#ecf0f1', name: 'Blanco' },
+                            { hex: '#8e6c4f', name: 'Marrón' }
+                        ],
+                        drawers: 4,
+                        shoeRack: true,
+                        innerStorage: true,
+                        shelf: false,
+                        closures: ['Telescópico', 'Hidráulico'],
+                        sizeType: 'queen',
+                        dimensions: '160 x 200 x 42 cm',
+                        assembly: 'easy',
+                        manual: true,
+                        assemblyPlace: 'Se arma en el domicilio del cliente',
+                        dynamicFeatures: {
+                            'Material Tapizado': 'Lino',
+                            'Resistente a Manchas': 'true',
+                            'Garantía (meses)': '12'
+                        },
+                        isNew: true
+                    },
+                    {
+                        id: generateId(),
+                        name: 'Cama Box King Master',
+                        location: 'Sucursal Norte',
+                        price: 245000,
+                        url: 'https://ejemplo.com/cama-king-master',
+                        images: [],
+                        colors: [
+                            { hex: '#1a1a2e', name: 'Negro' },
+                            { hex: '#c9a96e', name: 'Beige' }
+                        ],
+                        drawers: 6,
+                        shoeRack: true,
+                        innerStorage: true,
+                        shelf: true,
+                        closures: ['Telescópico', 'Rieles'],
+                        sizeType: 'king',
+                        dimensions: '190 x 200 x 45 cm',
+                        assembly: 'assembled',
+                        manual: true,
+                        assemblyPlace: 'Viene armado, solo desembalar',
+                        dynamicFeatures: {
+                            'Material Tapizado': 'Terciopelo',
+                            'Resistente a Manchas': 'true',
+                            'Garantía (meses)': '24'
+                        },
+                        isNew: true
+                    },
+                    {
+                        id: generateId(),
+                        name: 'Cama Box Individual Economy',
+                        location: 'Sucursal Sur',
+                        price: 89000,
+                        url: 'https://ejemplo.com/cama-individual-economy',
+                        images: [],
+                        colors: [
+                            { hex: '#5d6d7e', name: 'Gris Claro' }
+                        ],
+                        drawers: 2,
+                        shoeRack: false,
+                        innerStorage: true,
+                        shelf: false,
+                        closures: ['Rieles'],
+                        sizeType: 'individual',
+                        dimensions: '90 x 190 x 35 cm',
+                        assembly: 'unassembled',
+                        manual: false,
+                        assemblyPlace: 'Se entrega desarmado, armado por cuenta del cliente',
+                        dynamicFeatures: {
+                            'Material Tapizado': 'Poliéster',
+                            'Resistente a Manchas': 'false',
+                            'Garantía (meses)': '6'
+                        },
+                        isNew: true
+                    },
+                    {
+                        id: generateId(),
+                        name: 'Cama Box Matrimonial Comfort',
+                        location: 'Sucursal Centro',
+                        price: 155000,
+                        url: 'https://ejemplo.com/cama-matrimonial-comfort',
+                        images: [],
+                        colors: [
+                            { hex: '#7f8c8d', name: 'Gris Medio' },
+                            { hex: '#d4a76a', name: 'Arena' },
+                            { hex: '#1c2833', name: 'Carbón' }
+                        ],
+                        drawers: 3,
+                        shoeRack: true,
+                        innerStorage: false,
+                        shelf: true,
+                        closures: ['Hidráulico'],
+                        sizeType: 'matrimonial',
+                        dimensions: '140 x 190 x 40 cm',
+                        assembly: 'hard',
+                        manual: true,
+                        assemblyPlace: 'Servicio de armado incluido ($5.000 extra)',
+                        dynamicFeatures: {
+                            'Material Tapizado': 'Algodón',
+                            'Resistente a Manchas': 'true',
+                            'Garantía (meses)': '12'
+                        },
+                        isNew: true
+                    }
+                ]
+            };
 
-            products = [
-                {
-                    id: generateId(),
-                    name: 'Cama Box Queen Premium',
-                    location: 'Sucursal Centro',
-                    price: 185000,
-                    url: 'https://ejemplo.com/cama-queen-premium',
-                    images: [],
-                    colors: [
-                        { hex: '#2c3e50', name: 'Gris Oscuro' },
-                        { hex: '#ecf0f1', name: 'Blanco' },
-                        { hex: '#8e6c4f', name: 'Marrón' }
-                    ],
-                    drawers: 4,
-                    shoeRack: true,
-                    innerStorage: true,
-                    shelf: false,
-                    closures: ['Telescópico', 'Hidráulico'],
-                    sizeType: 'queen',
-                    dimensions: '160 x 200 x 42 cm',
-                    assembly: 'easy',
-                    manual: true,
-                    assemblyPlace: 'Se arma en el domicilio del cliente',
-                    dynamicFeatures: {
-                        'Material Tapizado': 'Lino',
-                        'Resistente a Manchas': 'true',
-                        'Garantía (meses)': '12'
-                    },
-                    isNew: true
-                },
-                {
-                    id: generateId(),
-                    name: 'Cama Box King Master',
-                    location: 'Sucursal Norte',
-                    price: 245000,
-                    url: 'https://ejemplo.com/cama-king-master',
-                    images: [],
-                    colors: [
-                        { hex: '#1a1a2e', name: 'Negro' },
-                        { hex: '#c9a96e', name: 'Beige' }
-                    ],
-                    drawers: 6,
-                    shoeRack: true,
-                    innerStorage: true,
-                    shelf: true,
-                    closures: ['Telescópico', 'Rieles'],
-                    sizeType: 'king',
-                    dimensions: '190 x 200 x 45 cm',
-                    assembly: 'assembled',
-                    manual: true,
-                    assemblyPlace: 'Viene armado, solo desembalar',
-                    dynamicFeatures: {
-                        'Material Tapizado': 'Terciopelo',
-                        'Resistente a Manchas': 'true',
-                        'Garantía (meses)': '24'
-                    },
-                    isNew: true
-                },
-                {
-                    id: generateId(),
-                    name: 'Cama Box Individual Economy',
-                    location: 'Sucursal Sur',
-                    price: 89000,
-                    url: 'https://ejemplo.com/cama-individual-economy',
-                    images: [],
-                    colors: [
-                        { hex: '#5d6d7e', name: 'Gris Claro' }
-                    ],
-                    drawers: 2,
-                    shoeRack: false,
-                    innerStorage: true,
-                    shelf: false,
-                    closures: ['Rieles'],
-                    sizeType: 'individual',
-                    dimensions: '90 x 190 x 35 cm',
-                    assembly: 'unassembled',
-                    manual: false,
-                    assemblyPlace: 'Se entrega desarmado, armado por cuenta del cliente',
-                    dynamicFeatures: {
-                        'Material Tapizado': 'Poliéster',
-                        'Resistente a Manchas': 'false',
-                        'Garantía (meses)': '6'
-                    },
-                    isNew: true
-                },
-                {
-                    id: generateId(),
-                    name: 'Cama Box Matrimonial Comfort',
-                    location: 'Sucursal Centro',
-                    price: 155000,
-                    url: 'https://ejemplo.com/cama-matrimonial-comfort',
-                    images: [],
-                    colors: [
-                        { hex: '#7f8c8d', name: 'Gris Medio' },
-                        { hex: '#d4a76a', name: 'Arena' },
-                        { hex: '#1c2833', name: 'Carbón' }
-                    ],
-                    drawers: 3,
-                    shoeRack: true,
-                    innerStorage: false,
-                    shelf: true,
-                    closures: ['Hidráulico'],
-                    sizeType: 'matrimonial',
-                    dimensions: '140 x 190 x 40 cm',
-                    assembly: 'hard',
-                    manual: true,
-                    assemblyPlace: 'Servicio de armado incluido ($5.000 extra)',
-                    dynamicFeatures: {
-                        'Material Tapizado': 'Algodón',
-                        'Resistente a Manchas': 'true',
-                        'Garantía (meses)': '12'
-                    },
-                    isNew: true
-                }
-            ];
-
-            saveData();
-            render();
-            showToast('Datos de ejemplo cargados', 'success');
+            const result = await apiCall('import.php', 'POST', demoData);
+            if (result && result.status === 'ok') {
+                await loadData();
+                showToast('Datos de ejemplo cargados', 'success');
+            }
         }
 
         // TOAST
