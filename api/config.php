@@ -15,6 +15,11 @@ if ($dbType === 'sqlite') {
     $pdo->setAttribute(PDO::ATTR_DEFAULT_FETCH_MODE, PDO::FETCH_ASSOC);
     $pdo->exec('PRAGMA journal_mode=WAL');
     $pdo->exec('PRAGMA foreign_keys=ON');
+
+    $schema = __DIR__ . '/../db/schema.sqlite.sql';
+    if (file_exists($schema)) {
+        $pdo->exec(file_get_contents($schema));
+    }
 } else {
     $required = ['DB_HOST', 'DB_NAME', 'DB_USER', 'DB_PASS'];
     $missing = array_filter($required, fn($k) => empty(getenv($k)));
