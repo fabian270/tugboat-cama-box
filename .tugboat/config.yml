@@ -5,11 +5,13 @@ services:
     symlink: false
     environment:
       DB_TYPE: sqlite
-      DB_PATH: ${TUGBOAT_ROOT}/data/camabox.db
+      DB_PATH: /var/www/html/data/camabox.db
     commands:
+      build:
+        - apt-get update && apt-get install -y php-sqlite3
       init:
         - a2enmod rewrite
-        - mkdir -p "${TUGBOAT_ROOT}/data"
+        - mkdir -p /var/www/html/data && chmod 777 /var/www/html/data
         - ln -snf "${TUGBOAT_ROOT}/site" "${DOCROOT}"
         - cp "${TUGBOAT_ROOT}/docker/apache-vhost.conf" /etc/apache2/sites-available/000-default.conf
         - cp -r "${TUGBOAT_ROOT}/api" "${DOCROOT}/api"
