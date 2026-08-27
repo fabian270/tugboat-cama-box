@@ -408,12 +408,6 @@
 
         function renderAdminContent() {
             const isAdmin = currentUser.role === 'admin';
-            const writeBtns = `<button class="btn btn-accent" onclick="openProductModal()">+ Nuevo Producto</button>
-                <button class="btn btn-outline btn-sm" onclick="openTypeModal()">Tipos</button>
-                <button class="btn btn-outline btn-sm" onclick="openCharModal()">Caracteristicas</button>
-                <button class="btn btn-outline btn-sm" onclick="exportData()">↓ Exportar</button>
-                <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFile').click()">↑ Importar</button>
-                <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">`;
 
             document.getElementById('adminView').innerHTML = `
                 <div class="stats-bar">
@@ -422,27 +416,46 @@
                     ${isAdmin ? `<div class="stat-card"><div class="stat-icon users">👤</div><div><div class="stat-value">${users.length}</div><div class="stat-label">Usuarios</div></div></div>` : ''}
                 </div>
                 <div class="tabs">
-                    <button class="tab-btn active" onclick="switchTab('products')">Productos</button>
-                    <button class="tab-btn" onclick="switchTab('types')">Tipos</button>
-                    ${isAdmin ? `<button class="tab-btn" onclick="switchTab('users')">Usuarios</button>` : ''}
+                    <button class="tab-btn active" data-tab="products" onclick="switchTab('products')">Productos</button>
+                    <button class="tab-btn" data-tab="types" onclick="switchTab('types')">Tipos</button>
+                    <button class="tab-btn" data-tab="chars" onclick="switchTab('chars')">Caracteristicas</button>
+                    ${isAdmin ? `<button class="tab-btn" data-tab="users" onclick="switchTab('users')">Usuarios</button>` : ''}
                 </div>
-                <div class="toolbar"><div class="toolbar-left">${writeBtns}</div></div>
+                <div class="toolbar"><div class="toolbar-left" id="toolbarActions"></div></div>
                 <div class="tab-content active" id="tab-products">
                     <div class="product-list" id="productList"></div>
                 </div>
                 <div class="tab-content" id="tab-types"><div id="typeListContent"></div></div>
+                <div class="tab-content" id="tab-chars"><div id="charListContent"></div></div>
                 ${isAdmin ? `<div class="tab-content" id="tab-users"><div id="userListContent"></div></div>` : ''}
             `;
             renderProductList();
             renderTypeList();
+            renderCharTab();
             if (isAdmin) renderUserList();
+            renderToolbar('products');
+        }
+
+        function renderToolbar(tab) {
+            const el = document.getElementById('toolbarActions');
+            if (!el) return;
+            const btns = {
+                products: `<button class="btn btn-accent" onclick="openProductModal()">+ Nuevo Producto</button>
+                    <button class="btn btn-outline btn-sm" onclick="exportData()">↓ Exportar</button>
+                    <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFile').click()">↑ Importar</button>
+                    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">`,
+                types: `<button class="btn btn-accent" onclick="openTypeModal()">+ Nuevo Tipo</button>`,
+                chars: `<button class="btn btn-accent" onclick="openCharModal()">+ Agregar Caracteristica</button>`,
+                users: `<button class="btn btn-accent" onclick="openUserModal()">+ Nuevo Usuario</button>`
+            };
+            el.innerHTML = btns[tab] || '';
         }
 
         function switchTab(tab) {
-            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            event.target.classList.add('active');
             document.getElementById('tab-' + tab).classList.add('active');
+            renderToolbar(tab);
         }
 
         function renderProductList() {
@@ -469,7 +482,6 @@
         function renderUserList() {
             const el = document.getElementById('userListContent');
             el.innerHTML = `
-                <button class="btn btn-accent btn-sm" style="margin-bottom:16px" onclick="openUserModal()">+ Nuevo Usuario</button>
                 <table class="user-table">
                     <thead><tr><th>Usuario</th><th>Rol</th><th>Creado</th><th>Acciones</th></tr></thead>
                     <tbody>${users.map(u => `
@@ -689,7 +701,6 @@
             const el = document.getElementById('typeListContent');
             if (!el) return;
             el.innerHTML = `
-                <button class="btn btn-accent btn-sm" style="margin-bottom:16px" onclick="openTypeModal()">+ Nuevo Tipo</button>
                 <div class="char-list">
                     ${productTypes.length === 0
                         ? '<p style="color:var(--text-light);font-size:0.85rem;text-align:center;padding:20px">No hay tipos de producto</p>'
@@ -776,6 +787,20 @@
             if (!confirm(`Eliminar "${name}" de todos los productos?`)) return;
             const result = await apiCall('characteristics.php?name=' + encodeURIComponent(name), 'DELETE');
             if (result && result.status === 'ok') { await loadData(); showToast('Eliminada', 'info'); }
+        }
+
+        function renderCharTab() {
+            const el = document.getElementById('charListContent');
+            if (!el) return;
+            const typeLabels = { text: 'Texto', boolean: 'Si/No', number: 'Numero', select: 'Seleccion' };
+            el.innerHTML = customCharacteristics.length === 0
+                ? '<p style="color:var(--text-light);font-size:0.85rem;text-align:center;padding:20px">No hay caracteristicas</p>'
+                : customCharacteristics.map(c => `
+                    <div class="char-item">
+                        <div><span class="char-name">${c.name}</span> <span class="char-type">${typeLabels[c.type]||c.type}</span>${c.options ? ` <span class="char-type">- ${c.options}</span>` : ''}</div>
+                        <button class="btn btn-sm btn-danger" onclick="removeCharacteristic('${c.name.replace(/'/g,"\\'")}')">✕</button>
+                    </div>
+                `).join('');
         }
 
         function renderCharList() {
