@@ -24,6 +24,8 @@ function getProducts($pdo) {
             'assemblyPlace' => $p['assembly_place'],
             'isNew' => (bool)$p['is_new'],
             'productType' => $p['product_type'] ?? '',
+            'altPage' => $p['alt_page'] ?? '',
+            'decision' => $p['decision'] ?? '',
             'colors' => [],
             'dynamicFeatures' => [],
         ];
@@ -54,27 +56,28 @@ function saveProduct($pdo, $data) {
         (int)($data['shoeRack'] ?? 0), (int)($data['innerStorage'] ?? 0), (int)($data['shelf'] ?? 0),
         json_encode($data['closures'] ?? []), $data['sizeType'] ?? '', $data['dimensions'] ?? '',
         $data['assembly'] ?? '', (int)($data['manual'] ?? 0), $data['assemblyPlace'] ?? '',
-        (int)($data['isNew'] ?? 1), $data['productType'] ?? ''
+        (int)($data['isNew'] ?? 1), $data['productType'] ?? '', $data['altPage'] ?? '',
+        $data['decision'] ?? ''
     ];
 
     if ($isSqlite) {
         $existing = $pdo->prepare('SELECT id FROM products WHERE id = ?');
         $existing->execute([$id]);
         if ($existing->fetch()) {
-            $stmt = $pdo->prepare('UPDATE products SET name=?,location=?,price=?,url=?,images=?,drawers=?,shoe_rack=?,inner_storage=?,shelf=?,closures=?,size_type=?,dimensions=?,assembly=?,manual=?,assembly_place=?,is_new=?,product_type=? WHERE id=?');
+            $stmt = $pdo->prepare('UPDATE products SET name=?,location=?,price=?,url=?,images=?,drawers=?,shoe_rack=?,inner_storage=?,shelf=?,closures=?,size_type=?,dimensions=?,assembly=?,manual=?,assembly_place=?,is_new=?,product_type=?,alt_page=?,decision=? WHERE id=?');
             $upt = array_slice($vals, 1);
             $upt[] = $id;
             $stmt->execute($upt);
         } else {
-            $stmt = $pdo->prepare('INSERT INTO products (id,name,location,price,url,images,drawers,shoe_rack,inner_storage,shelf,closures,size_type,dimensions,assembly,manual,assembly_place,is_new,product_type) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+            $stmt = $pdo->prepare('INSERT INTO products (id,name,location,price,url,images,drawers,shoe_rack,inner_storage,shelf,closures,size_type,dimensions,assembly,manual,assembly_place,is_new,product_type,alt_page,decision) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
             $stmt->execute($vals);
         }
     } else {
-        $pdo->prepare('INSERT INTO products (id,name,location,price,url,images,drawers,shoe_rack,inner_storage,shelf,closures,size_type,dimensions,assembly,manual,assembly_place,is_new,product_type)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        $pdo->prepare('INSERT INTO products (id,name,location,price,url,images,drawers,shoe_rack,inner_storage,shelf,closures,size_type,dimensions,assembly,manual,assembly_place,is_new,product_type,alt_page,decision)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON DUPLICATE KEY UPDATE name=VALUES(name),location=VALUES(location),price=VALUES(price),url=VALUES(url),images=VALUES(images),
             drawers=VALUES(drawers),shoe_rack=VALUES(shoe_rack),inner_storage=VALUES(inner_storage),shelf=VALUES(shelf),closures=VALUES(closures),
-            size_type=VALUES(size_type),dimensions=VALUES(dimensions),assembly=VALUES(assembly),manual=VALUES(manual),assembly_place=VALUES(assembly_place),is_new=VALUES(is_new),product_type=VALUES(product_type)')->execute($vals);
+            size_type=VALUES(size_type),dimensions=VALUES(dimensions),assembly=VALUES(assembly),manual=VALUES(manual),assembly_place=VALUES(assembly_place),is_new=VALUES(is_new),product_type=VALUES(product_type),alt_page=VALUES(alt_page),decision=VALUES(decision)')->execute($vals);
     }
 
     $pdo->prepare('DELETE FROM product_colors WHERE product_id = ?')->execute([$id]);

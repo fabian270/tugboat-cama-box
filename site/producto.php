@@ -166,6 +166,8 @@
                     <h1>${p.name}</h1>
                     <div class="location">${p.location || 'Sin ubicacion'}</div>
                     ${p.url ? `<div class="url"><a href="${p.url}" target="_blank">Ver sitio web</a></div>` : ''}
+                    ${p.altPage ? `<div class="url"><a href="${p.altPage}" target="_blank" style="color:var(--warning)">Pagina alternativa</a></div>` : ''}
+                    ${p.decision ? `<div class="location" style="color:var(--accent);font-weight:600">Decision: ${p.decision}</div>` : ''}
                     <div class="price">$${Number(p.price || 0).toLocaleString('es-AR')}</div>
                     ${p.colors && p.colors.length > 0 ? `
                         <div class="color-list">

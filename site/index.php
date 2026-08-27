@@ -552,6 +552,8 @@
                         <div class="product-name">${p.name}</div>
                         <div class="product-location">${p.location || 'Sin ubicacion'}</div>
                         ${p.url ? `<div class="product-location"><a href="${p.url}" target="_blank" style="color:var(--info);text-decoration:none;font-size:0.85rem">Ver sitio web</a></div>` : ''}
+                        ${p.altPage ? `<div class="product-location"><a href="${p.altPage}" target="_blank" style="color:var(--warning);text-decoration:none;font-size:0.85rem">Pagina alternativa</a></div>` : ''}
+                        ${p.decision ? `<div class="product-location" style="color:var(--accent);font-weight:600">Decision: ${p.decision}</div>` : ''}
                         <div class="product-price">$${Number(p.price || 0).toLocaleString('es-AR')}</div>
                         <div class="product-specs">
                             ${p.productType ? `<span class="spec-tag">${p.productType}</span>` : ''}
@@ -600,7 +602,7 @@
 
             const assemblyLabels = { assembled: 'Armado', unassembled: 'Sin Armar', easy: 'Facil', hard: 'Dificil' };
 
-            let headers = ['Foto', 'Nombre', 'Precio', 'Lugar', 'Tipo', 'Tamaño', 'Medidas', 'Colores', 'Cajones', 'Zapatero', 'Guard. Interior', 'Estante', 'Cierre', 'Armado', 'Instructivo', 'Lugar Armado'];
+            let headers = ['Foto', 'Nombre', 'Precio', 'Lugar', 'Tipo', 'Pag. Alt.', 'Decision', 'Tamaño', 'Medidas', 'Colores', 'Cajones', 'Zapatero', 'Guard. Interior', 'Estante', 'Cierre', 'Armado', 'Instructivo', 'Lugar Armado'];
 
             let rows = filtered.map(p => {
                 let cells = [
@@ -609,6 +611,8 @@
                     `<span style="color:var(--accent);font-weight:700">$${Number(p.price||0).toLocaleString('es-AR')}</span>`,
                     p.location || '-',
                     p.productType || '-',
+                    p.altPage ? `<a href="${p.altPage}" target="_blank" style="color:var(--warning)" title="${p.altPage}">Pagina</a>` : '-',
+                    p.decision || '-',
                     p.sizeType || '-',
                     p.dimensions || '-',
                     `<div class="table-cell-colors">${(p.colors||[]).map(c => `<span class="table-color-dot" style="background:${c.hex}" title="${c.name}"></span>`).join('')}</div>`,
@@ -691,6 +695,8 @@
                         <tr><td><strong>Precio</strong></td>${selected.map(p => `<td style="color:var(--accent);font-weight:700;font-size:1.1rem">$${Number(p.price||0).toLocaleString('es-AR')}</td>`).join('')}</tr>
                         <tr><td><strong>Ubicacion</strong></td>${selected.map(p => `<td>${p.location || '-'}</td>`).join('')}</tr>
                         <tr><td><strong>Tipo</strong></td>${selected.map(p => `<td>${p.productType || '-'}</td>`).join('')}</tr>
+                        <tr><td><strong>Pag. Alternativa</strong></td>${selected.map(p => `<td>${p.altPage ? `<a href="${p.altPage}" target="_blank" style="color:var(--warning)">Abrir</a>` : '-'}</td>`).join('')}</tr>
+                        <tr><td><strong>Decision</strong></td>${selected.map(p => `<td>${p.decision || '-'}</td>`).join('')}</tr>
                         <tr><td><strong>Tamaño</strong></td>${selected.map(p => `<td>${p.sizeType || '-'}</td>`).join('')}</tr>
                         <tr><td><strong>Medidas</strong></td>${selected.map(p => `<td>${p.dimensions || '-'}</td>`).join('')}</tr>
                         <tr><td><strong>Colores</strong></td>${selected.map(p => `<td><div class="table-cell-colors">${(p.colors||[]).map(c => `<span class="table-color-dot" style="background:${c.hex}" title="${c.name}"></span>`).join('')}</div></td>`).join('')}</tr>
@@ -737,6 +743,8 @@
                 <div class="detail-row"><span class="label">Tipo</span><span class="value">${p.productType || '-'}</span></div>
                 <div class="detail-row"><span class="label">Precio</span><span class="value" style="color:var(--accent)">$${Number(p.price||0).toLocaleString('es-AR')}</span></div>
                 ${p.url ? `<div class="detail-row"><span class="label">Sitio Web</span><span class="value"><a href="${p.url}" target="_blank" style="color:var(--info)">Abrir enlace</a></span></div>` : ''}
+                ${p.altPage ? `<div class="detail-row"><span class="label">Pag. Alternativa</span><span class="value"><a href="${p.altPage}" target="_blank" style="color:var(--warning)">Abrir enlace</a></span></div>` : ''}
+                ${p.decision ? `<div class="detail-row"><span class="label">Decision</span><span class="value">${p.decision}</span></div>` : ''}
             </div>`;
 
             if (p.colors && p.colors.length > 0) {

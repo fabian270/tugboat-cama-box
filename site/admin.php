@@ -188,6 +188,8 @@
                         <div class="form-group"><label>Precio ($)</label><input type="number" id="prodPrice" placeholder="0.00" step="0.01"></div>
                         <div class="form-group"><label>Tipo de Producto</label><select id="prodType"><option value="">Seleccionar...</option></select></div>
                         <div class="form-group full-width"><label>URL del Sitio del Producto</label><input type="url" id="prodUrl" placeholder="https://ejemplo.com/producto"></div>
+                        <div class="form-group full-width"><label>Pagina Alternativa</label><input type="url" id="prodAltPage" placeholder="https://ejemplo.com/pagina-alternativa"></div>
+                        <div class="form-group full-width"><label>Decision</label><textarea id="prodDecision" placeholder="Ej: Descarta / Preferido / En analisis..."></textarea></div>
                     </div>
                 </div>
                 <div class="form-section">
@@ -507,6 +509,8 @@
             document.getElementById('prodPrice').value = p.price || '';
             document.getElementById('prodType').value = p.productType || '';
             document.getElementById('prodUrl').value = p.url || '';
+            document.getElementById('prodAltPage').value = p.altPage || '';
+            document.getElementById('prodDecision').value = p.decision || '';
             document.getElementById('prodDrawers').value = p.drawers || 0;
             document.getElementById('prodShoeRack').value = p.shoeRack ? 'true' : 'false';
             document.getElementById('prodInnerStorage').value = p.innerStorage ? 'true' : 'false';
@@ -530,7 +534,7 @@
         }
 
         function resetProductForm() {
-            ['prodName','prodLocation','prodPrice','prodUrl','prodDimensions','prodAssemblyPlace'].forEach(id => document.getElementById(id).value = '');
+            ['prodName','prodLocation','prodPrice','prodUrl','prodAltPage','prodDecision','prodDimensions','prodAssemblyPlace'].forEach(id => document.getElementById(id).value = '');
             document.getElementById('prodType').value = '';
             document.getElementById('prodDrawers').value = 0;
             ['prodShoeRack','prodInnerStorage','prodShelf'].forEach(id => document.getElementById(id).value = 'false');
@@ -644,6 +648,8 @@
                 name, location: document.getElementById('prodLocation').value.trim(),
                 price: parseFloat(document.getElementById('prodPrice').value) || 0,
                 url: document.getElementById('prodUrl').value.trim(),
+                altPage: document.getElementById('prodAltPage').value.trim(),
+                decision: document.getElementById('prodDecision').value.trim(),
                 images: [...uploadedImages], colors: [...productColors],
                 drawers: parseInt(document.getElementById('prodDrawers').value) || 0,
                 shoeRack: document.getElementById('prodShoeRack').value === 'true',

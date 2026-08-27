@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS products (
     assembly_place TEXT DEFAULT '',
     is_new INTEGER DEFAULT 1,
     product_type TEXT DEFAULT '',
+    alt_page TEXT DEFAULT '',
+    decision TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
 );
