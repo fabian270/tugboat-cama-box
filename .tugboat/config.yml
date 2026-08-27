@@ -7,8 +7,6 @@ services:
       DB_TYPE: sqlite
       DB_PATH: /var/www/html/data/camabox.db
     commands:
-      build:
-        - apt-get update && apt-get install -y php-sqlite3
       init:
         - a2enmod rewrite
         - mkdir -p /var/www/html/data && chmod 777 /var/www/html/data
