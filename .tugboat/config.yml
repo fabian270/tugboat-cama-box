@@ -5,11 +5,10 @@ services:
     symlink: false
     environment:
       DB_TYPE: sqlite
-      DB_PATH: /var/www/html/data/camabox.db
+      DB_PATH: /tmp/camabox.db
     commands:
       init:
         - a2enmod rewrite
-        - mkdir -p /var/www/html/data && chmod 777 /var/www/html/data
         - ln -snf "${TUGBOAT_ROOT}/site" "${DOCROOT}"
         - cp "${TUGBOAT_ROOT}/docker/apache-vhost.conf" /etc/apache2/sites-available/000-default.conf
         - cp -r "${TUGBOAT_ROOT}/api" "${DOCROOT}/api"
