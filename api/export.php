@@ -1,6 +1,6 @@
 <?php
 require __DIR__ . '/config.php';
-require __DIR__ . '/products.php';
+require __DIR__ . '/products_functions.php';
 
 header('Content-Disposition: attachment; filename="camabox_backup_' . date('Y-m-d') . '.json"');
 echo json_encode([
