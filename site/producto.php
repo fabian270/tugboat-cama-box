@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Producto - CamaBox Pro</title>
+    <title>Producto - AppPro</title>
     <style>
         :root {
             --primary: #1a1a2e; --primary-light: #16213e;
@@ -102,7 +102,7 @@
 <body>
     <header>
         <div class="header-inner">
-            <a href="index.php" class="logo" style="text-decoration:none;color:white">Cama<span>Box</span> Pro</a>
+            <a href="index.php" class="logo" style="text-decoration:none;color:white">App<span>Pro</span></a>
             <a href="index.php" class="btn btn-outline">← Volver al Comparador</a>
         </div>
     </header>
@@ -131,7 +131,7 @@
             if (prods) product = prods.find(p => p.id === id);
 
             if (!product) { showNotFound(); return; }
-            document.title = `${product.name} - CamaBox Pro`;
+            document.title = `${product.name} - AppPro`;
             render();
         }
 

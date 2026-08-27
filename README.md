@@ -1,6 +1,6 @@
-# Cama Box Pro
+# AppPro
 
-Aplicación web para gestionar y comparar productos de **camas box** con estilo ecommerce. Backend PHP + MariaDB con Docker.
+Aplicación web para gestionar y comparar productos de **camas box** con estilo ecommerce. Backend PHP con SQLite/MySQL con Docker.
 
 ## Características
 

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cama Box - Comparador de Productos</title>
+    <title>AppPro - Comparador de Productos</title>
     <style>
         :root {
             --primary: #1a1a2e;
@@ -383,7 +383,7 @@
 <body>
     <header>
         <div class="header-inner">
-            <div class="logo">Cama<span>Box</span></div>
+            <div class="logo">App<span>Pro</span></div>
             <div class="header-actions">
                 <input type="text" class="search-bar" id="searchInput" placeholder="Buscar productos...">
                 
@@ -793,7 +793,7 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `camabox_backup_${new Date().toISOString().slice(0,10)}.json`;
+            a.download = `apppro_backup_${new Date().toISOString().slice(0,10)}.json`;
             a.click();
             URL.revokeObjectURL(url);
         }
