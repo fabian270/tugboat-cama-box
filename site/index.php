@@ -186,7 +186,7 @@
 
         .product-card .badge {
             position: absolute; top: 12px; left: 12px;
-            background: var(--accent); color: white;
+            background: var(--info); color: white;
             padding: 4px 12px; border-radius: 20px;
             font-size: 0.8rem; font-weight: 600; z-index: 2;
         }
@@ -533,7 +533,7 @@
 
                 return `
                 <div class="product-card">
-                    ${p.isNew ? '<span class="badge">Nuevo</span>' : ''}
+                    ${p.productType ? `<span class="badge">${p.productType}</span>` : ''}
                     <div class="product-image-container">
                         ${mainImg
                             ? `<img src="${mainImg}" alt="${p.name}" onerror="this.parentElement.innerHTML='<div style=\\'display:flex;align-items:center;justify-content:center;height:100%;font-size:3rem;color:#ccc\\'>🛏</div>'">`
@@ -554,6 +554,7 @@
                         ${p.url ? `<div class="product-location"><a href="${p.url}" target="_blank" style="color:var(--info);text-decoration:none;font-size:0.85rem">Ver sitio web</a></div>` : ''}
                         <div class="product-price">$${Number(p.price || 0).toLocaleString('es-AR')}</div>
                         <div class="product-specs">
+                            ${p.productType ? `<span class="spec-tag">${p.productType}</span>` : ''}
                             ${p.sizeType ? `<span class="spec-tag">${p.sizeType}</span>` : ''}
                             ${p.drawers > 0 ? `<span class="spec-tag">${p.drawers} cajon${p.drawers > 1 ? 'es' : ''}</span>` : ''}
                             ${p.shoeRack ? '<span class="spec-tag">Zapatero</span>' : ''}
@@ -599,7 +600,7 @@
 
             const assemblyLabels = { assembled: 'Armado', unassembled: 'Sin Armar', easy: 'Facil', hard: 'Dificil' };
 
-            let headers = ['Foto', 'Nombre', 'Precio', 'Lugar', 'Tamaño', 'Medidas', 'Colores', 'Cajones', 'Zapatero', 'Guard. Interior', 'Estante', 'Cierre', 'Armado', 'Instructivo', 'Lugar Armado'];
+            let headers = ['Foto', 'Nombre', 'Precio', 'Lugar', 'Tipo', 'Tamaño', 'Medidas', 'Colores', 'Cajones', 'Zapatero', 'Guard. Interior', 'Estante', 'Cierre', 'Armado', 'Instructivo', 'Lugar Armado'];
 
             let rows = filtered.map(p => {
                 let cells = [
@@ -607,6 +608,7 @@
                     `<strong>${p.name}</strong>`,
                     `<span style="color:var(--accent);font-weight:700">$${Number(p.price||0).toLocaleString('es-AR')}</span>`,
                     p.location || '-',
+                    p.productType || '-',
                     p.sizeType || '-',
                     p.dimensions || '-',
                     `<div class="table-cell-colors">${(p.colors||[]).map(c => `<span class="table-color-dot" style="background:${c.hex}" title="${c.name}"></span>`).join('')}</div>`,
@@ -688,6 +690,7 @@
                         <tr><td><strong>Foto</strong></td>${selected.map(p => `<td>${p.images && p.images[0] ? `<img src="${p.images[0]}" style="width:100px;height:80px;object-fit:cover;border-radius:8px">` : '🛏'}</td>`).join('')}</tr>
                         <tr><td><strong>Precio</strong></td>${selected.map(p => `<td style="color:var(--accent);font-weight:700;font-size:1.1rem">$${Number(p.price||0).toLocaleString('es-AR')}</td>`).join('')}</tr>
                         <tr><td><strong>Ubicacion</strong></td>${selected.map(p => `<td>${p.location || '-'}</td>`).join('')}</tr>
+                        <tr><td><strong>Tipo</strong></td>${selected.map(p => `<td>${p.productType || '-'}</td>`).join('')}</tr>
                         <tr><td><strong>Tamaño</strong></td>${selected.map(p => `<td>${p.sizeType || '-'}</td>`).join('')}</tr>
                         <tr><td><strong>Medidas</strong></td>${selected.map(p => `<td>${p.dimensions || '-'}</td>`).join('')}</tr>
                         <tr><td><strong>Colores</strong></td>${selected.map(p => `<td><div class="table-cell-colors">${(p.colors||[]).map(c => `<span class="table-color-dot" style="background:${c.hex}" title="${c.name}"></span>`).join('')}</div></td>`).join('')}</tr>
@@ -731,6 +734,7 @@
             html += `<div class="detail-section"><h3>Informacion General</h3>
                 <div class="detail-row"><span class="label">Nombre</span><span class="value">${p.name}</span></div>
                 <div class="detail-row"><span class="label">Ubicacion</span><span class="value">${p.location || '-'}</span></div>
+                <div class="detail-row"><span class="label">Tipo</span><span class="value">${p.productType || '-'}</span></div>
                 <div class="detail-row"><span class="label">Precio</span><span class="value" style="color:var(--accent)">$${Number(p.price||0).toLocaleString('es-AR')}</span></div>
                 ${p.url ? `<div class="detail-row"><span class="label">Sitio Web</span><span class="value"><a href="${p.url}" target="_blank" style="color:var(--info)">Abrir enlace</a></span></div>` : ''}
             </div>`;

@@ -52,7 +52,7 @@
         .gallery-dot.active { background: white; width: 24px; border-radius: 5px; }
 
         .hero-info { padding: 32px; }
-        .hero-info .badge { display: inline-block; background: var(--accent); color: white; padding: 4px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-bottom: 12px; }
+        .hero-gallery .badge { position: absolute; top: 12px; left: 12px; background: var(--info); color: white; padding: 4px 14px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; z-index: 2; }
         .hero-info h1 { font-size: 1.8rem; color: var(--primary); margin-bottom: 8px; }
         .hero-info .location { color: var(--text-light); margin-bottom: 4px; }
         .hero-info .url a { color: var(--info); text-decoration: none; font-size: 0.9rem; }
@@ -151,6 +151,7 @@
 
             let html = `<div class="product-hero">
                 <div class="hero-gallery">
+                    ${p.productType ? `<span class="badge">${p.productType}</span>` : ''}
                     ${hasImages
                         ? `<img id="heroImg" src="${p.images[0]}" alt="${p.name}" onerror="this.outerHTML='<div class=\\'placeholder\\'>🛏</div>'">`
                         : '<div class="placeholder">🛏'
@@ -162,7 +163,6 @@
                     ` : ''}
                 </div>
                 <div class="hero-info">
-                    ${p.isNew ? '<span class="badge">Nuevo</span>' : ''}
                     <h1>${p.name}</h1>
                     <div class="location">${p.location || 'Sin ubicacion'}</div>
                     ${p.url ? `<div class="url"><a href="${p.url}" target="_blank">Ver sitio web</a></div>` : ''}

@@ -16,8 +16,15 @@ CREATE TABLE IF NOT EXISTS products (
     manual INTEGER DEFAULT 0,
     assembly_place TEXT DEFAULT '',
     is_new INTEGER DEFAULT 1,
+    product_type TEXT DEFAULT '',
     created_at TEXT DEFAULT (datetime('now')),
     updated_at TEXT DEFAULT (datetime('now'))
+);
+
+CREATE TABLE IF NOT EXISTS product_types (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL UNIQUE,
+    created_at TEXT DEFAULT (datetime('now'))
 );
 
 CREATE TABLE IF NOT EXISTS product_colors (

@@ -5,5 +5,6 @@ require __DIR__ . '/products_functions.php';
 header('Content-Disposition: attachment; filename="apppro_backup_' . date('Y-m-d') . '.json"');
 echo json_encode([
     'products' => getProducts($pdo),
-    'customCharacteristics' => $pdo->query('SELECT name,type,options FROM custom_characteristics ORDER BY id')->fetchAll()
+    'customCharacteristics' => $pdo->query('SELECT name,type,options FROM custom_characteristics ORDER BY id')->fetchAll(),
+    'productTypes' => $pdo->query('SELECT name FROM product_types ORDER BY id')->fetchAll()
 ], JSON_PRETTY_PRINT);

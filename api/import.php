@@ -15,28 +15,27 @@ function importSaveProduct($pdo, $data) {
         (int)($data['shoeRack'] ?? 0), (int)($data['innerStorage'] ?? 0), (int)($data['shelf'] ?? 0),
         json_encode($data['closures'] ?? []), $data['sizeType'] ?? '', $data['dimensions'] ?? '',
         $data['assembly'] ?? '', (int)($data['manual'] ?? 0), $data['assemblyPlace'] ?? '',
-        (int)($data['isNew'] ?? 1)
+        (int)($data['isNew'] ?? 1), $data['productType'] ?? ''
     ];
 
     if ($isSqlite) {
         $existing = $pdo->prepare('SELECT id FROM products WHERE id = ?');
         $existing->execute([$id]);
         if ($existing->fetch()) {
-            $stmt = $pdo->prepare('UPDATE products SET name=?,location=?,price=?,url=?,images=?,drawers=?,shoe_rack=?,inner_storage=?,shelf=?,closures=?,size_type=?,dimensions=?,assembly=?,manual=?,assembly_place=?,is_new=? WHERE id=?');
-            array_shift($vals);
-            $vals[] = $id;
-            $stmt->execute($vals);
+            $stmt = $pdo->prepare('UPDATE products SET name=?,location=?,price=?,url=?,images=?,drawers=?,shoe_rack=?,inner_storage=?,shelf=?,closures=?,size_type=?,dimensions=?,assembly=?,manual=?,assembly_place=?,is_new=?,product_type=? WHERE id=?');
+            $upt = array_slice($vals, 1);
+            $upt[] = $id;
+            $stmt->execute($upt);
         } else {
-            $stmt = $pdo->prepare('INSERT INTO products (id,name,location,price,url,images,drawers,shoe_rack,inner_storage,shelf,closures,size_type,dimensions,assembly,manual,assembly_place,is_new) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
+            $stmt = $pdo->prepare('INSERT INTO products (id,name,location,price,url,images,drawers,shoe_rack,inner_storage,shelf,closures,size_type,dimensions,assembly,manual,assembly_place,is_new,product_type) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)');
             $stmt->execute($vals);
         }
     } else {
-        $stmt = $pdo->prepare('INSERT INTO products (id,name,location,price,url,images,drawers,shoe_rack,inner_storage,shelf,closures,size_type,dimensions,assembly,manual,assembly_place,is_new)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        $pdo->prepare('INSERT INTO products (id,name,location,price,url,images,drawers,shoe_rack,inner_storage,shelf,closures,size_type,dimensions,assembly,manual,assembly_place,is_new,product_type)
+            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
             ON DUPLICATE KEY UPDATE name=VALUES(name),location=VALUES(location),price=VALUES(price),url=VALUES(url),images=VALUES(images),
             drawers=VALUES(drawers),shoe_rack=VALUES(shoe_rack),inner_storage=VALUES(inner_storage),shelf=VALUES(shelf),closures=VALUES(closures),
-            size_type=VALUES(size_type),dimensions=VALUES(dimensions),assembly=VALUES(assembly),manual=VALUES(manual),assembly_place=VALUES(assembly_place),is_new=VALUES(is_new)');
-        $stmt->execute($vals);
+            size_type=VALUES(size_type),dimensions=VALUES(dimensions),assembly=VALUES(assembly),manual=VALUES(manual),assembly_place=VALUES(assembly_place),is_new=VALUES(is_new),product_type=VALUES(product_type)')->execute($vals);
     }
 
     $pdo->prepare('DELETE FROM product_colors WHERE product_id = ?')->execute([$id]);
@@ -57,6 +56,7 @@ try {
         requireAuth();
         $products = $input['products'] ?? [];
         $chars = $input['customCharacteristics'] ?? [];
+        $types = $input['productTypes'] ?? [];
         $isSqlite = $pdo->getAttribute(PDO::ATTR_DRIVER_NAME) === 'sqlite';
 
         if ($isSqlite) {
@@ -64,18 +64,28 @@ try {
             $pdo->exec('DELETE FROM product_colors');
             $pdo->exec('DELETE FROM products');
             $pdo->exec('DELETE FROM custom_characteristics');
+            $pdo->exec('DELETE FROM product_types');
         } else {
             $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
             $pdo->exec('TRUNCATE TABLE product_dynamic_features');
             $pdo->exec('TRUNCATE TABLE product_colors');
             $pdo->exec('TRUNCATE TABLE products');
             $pdo->exec('TRUNCATE TABLE custom_characteristics');
+            $pdo->exec('TRUNCATE TABLE product_types');
             $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
         }
 
         $insChar = $pdo->prepare('INSERT INTO custom_characteristics (name,type,options) VALUES (?,?,?)');
         foreach ($chars as $c) {
             $insChar->execute([$c['name'], $c['type'], $c['options'] ?? null]);
+        }
+
+        $insType = $pdo->prepare('INSERT OR IGNORE INTO product_types (name) VALUES (?)');
+        foreach ($types as $t) {
+            if (!empty($t['name'])) $insType->execute([$t['name']]);
+        }
+        if ($isSqlite && !$types) {
+            foreach (['cama', 'mueble', 'otro'] as $t) { $insType->execute([$t]); }
         }
 
         foreach ($products as $p) {

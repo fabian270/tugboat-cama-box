@@ -186,6 +186,7 @@
                         <div class="form-group full-width"><label>Nombre del Producto</label><input type="text" id="prodName" placeholder="Ej: Cama Box Queen Luxury"></div>
                         <div class="form-group"><label>Lugar / Ubicacion</label><input type="text" id="prodLocation" placeholder="Ej: Sucursal Centro"></div>
                         <div class="form-group"><label>Precio ($)</label><input type="number" id="prodPrice" placeholder="0.00" step="0.01"></div>
+                        <div class="form-group"><label>Tipo de Producto</label><select id="prodType"><option value="">Seleccionar...</option></select></div>
                         <div class="form-group full-width"><label>URL del Sitio del Producto</label><input type="url" id="prodUrl" placeholder="https://ejemplo.com/producto"></div>
                     </div>
                 </div>
@@ -291,6 +292,20 @@
         </div>
     </div>
 
+    <div class="modal-overlay" id="typeModal">
+        <div class="modal" style="max-width:480px">
+            <div class="modal-header">
+                <h2>Gestionar Tipos</h2>
+                <button class="modal-close" onclick="closeTypeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group"><label>Nombre</label><input type="text" id="newTypeName" placeholder="Ej: cama, mueble, otro"></div>
+                <button class="btn btn-sm btn-accent" style="margin-top:12px" onclick="addType()">+ Agregar</button>
+                <div class="char-list" id="typeList"></div>
+            </div>
+        </div>
+    </div>
+
     <div class="toast-container" id="toastContainer"></div>
 
     <script>
@@ -302,6 +317,7 @@
         let uploadedImages = [];
         let productColors = [];
         let dynamicFeatureRows = [];
+        let productTypes = [];
 
         async function apiCall(endpoint, method, body) {
             const opts = { method: method || 'GET', headers: {} };
@@ -373,12 +389,14 @@
         }
 
         async function loadData() {
-            const [prods, chars] = await Promise.all([
+            const [prods, chars, ptypes] = await Promise.all([
                 apiCall('products.php'),
-                apiCall('characteristics.php')
+                apiCall('characteristics.php'),
+                apiCall('product_types.php')
             ]);
             if (prods !== null) products = prods;
             if (chars !== null) customCharacteristics = chars;
+            if (ptypes !== null) productTypes = ptypes;
             if (currentUser.role === 'admin') {
                 const u = await apiCall('users.php');
                 if (u !== null) users = u;
@@ -389,6 +407,7 @@
         function renderAdminContent() {
             const isAdmin = currentUser.role === 'admin';
             const writeBtns = `<button class="btn btn-accent" onclick="openProductModal()">+ Nuevo Producto</button>
+                <button class="btn btn-outline btn-sm" onclick="openTypeModal()">Tipos</button>
                 <button class="btn btn-outline btn-sm" onclick="openCharModal()">Caracteristicas</button>
                 <button class="btn btn-outline btn-sm" onclick="exportData()">↓ Exportar</button>
                 <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFile').click()">↑ Importar</button>
@@ -402,15 +421,18 @@
                 </div>
                 <div class="tabs">
                     <button class="tab-btn active" onclick="switchTab('products')">Productos</button>
+                    <button class="tab-btn" onclick="switchTab('types')">Tipos</button>
                     ${isAdmin ? `<button class="tab-btn" onclick="switchTab('users')">Usuarios</button>` : ''}
                 </div>
                 <div class="toolbar"><div class="toolbar-left">${writeBtns}</div></div>
                 <div class="tab-content active" id="tab-products">
                     <div class="product-list" id="productList"></div>
                 </div>
+                <div class="tab-content" id="tab-types"><div id="typeListContent"></div></div>
                 ${isAdmin ? `<div class="tab-content" id="tab-users"><div id="userListContent"></div></div>` : ''}
             `;
             renderProductList();
+            renderTypeList();
             if (isAdmin) renderUserList();
         }
 
@@ -460,7 +482,15 @@
         }
 
         // PRODUCT MODAL
+        function populateTypeSelect() {
+            const sel = document.getElementById('prodType');
+            const current = sel.value;
+            sel.innerHTML = `<option value="">Seleccionar...</option>` + productTypes.map(t => `<option value="${t.name.replace(/"/g,'&quot;')}">${t.name}</option>`).join('');
+            if (current) sel.value = current;
+        }
+
         function openProductModal(productId) {
+            populateTypeSelect();
             document.getElementById('editProductId').value = productId || '';
             document.getElementById('modalTitle').textContent = productId ? 'Editar Producto' : 'Nuevo Producto';
             if (productId) {
@@ -475,6 +505,7 @@
             document.getElementById('prodName').value = p.name || '';
             document.getElementById('prodLocation').value = p.location || '';
             document.getElementById('prodPrice').value = p.price || '';
+            document.getElementById('prodType').value = p.productType || '';
             document.getElementById('prodUrl').value = p.url || '';
             document.getElementById('prodDrawers').value = p.drawers || 0;
             document.getElementById('prodShoeRack').value = p.shoeRack ? 'true' : 'false';
@@ -500,6 +531,7 @@
 
         function resetProductForm() {
             ['prodName','prodLocation','prodPrice','prodUrl','prodDimensions','prodAssemblyPlace'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('prodType').value = '';
             document.getElementById('prodDrawers').value = 0;
             ['prodShoeRack','prodInnerStorage','prodShelf'].forEach(id => document.getElementById(id).value = 'false');
             document.getElementById('prodSizeType').value = '';
@@ -622,6 +654,7 @@
                 assembly: document.getElementById('prodAssembly').value,
                 manual: document.getElementById('prodManual').value === 'true',
                 assemblyPlace: document.getElementById('prodAssemblyPlace').value.trim(),
+                productType: document.getElementById('prodType').value,
                 dynamicFeatures,
                 isNew: editId ? (products.find(p => p.id === editId)?.isNew ?? true) : true
             };
@@ -644,6 +677,67 @@
         }
 
         function generateId() { return Date.now().toString(36) + Math.random().toString(36).substr(2, 5); }
+
+        // TYPES
+        function renderTypeList() {
+            const el = document.getElementById('typeListContent');
+            if (!el) return;
+            el.innerHTML = `
+                <button class="btn btn-accent btn-sm" style="margin-bottom:16px" onclick="openTypeModal()">+ Nuevo Tipo</button>
+                <div class="char-list">
+                    ${productTypes.length === 0
+                        ? '<p style="color:var(--text-light);font-size:0.85rem;text-align:center;padding:20px">No hay tipos de producto</p>'
+                        : productTypes.map(t => `
+                            <div class="char-item">
+                                <div><span class="char-name">${t.name}</span></div>
+                                <button class="btn btn-sm btn-danger" onclick="deleteType('${t.id}')">✕</button>
+                            </div>
+                        `).join('')}
+                </div>`;
+        }
+
+        function openTypeModal() {
+            document.getElementById('typeModal').classList.add('active');
+            document.getElementById('newTypeName').value = '';
+            document.getElementById('typeList').innerHTML = productTypes.length === 0
+                ? '<p style="color:var(--text-light);font-size:0.85rem;text-align:center;padding:20px">No hay tipos</p>'
+                : productTypes.map(t => `
+                    <div class="char-item">
+                        <div><span class="char-name">${t.name}</span></div>
+                        <button class="btn btn-sm" style="background:var(--info);color:white" onclick="editTypePrompt('${t.id}','${t.name.replace(/'/g,"\\'")}')">✎</button>
+                        <button class="btn btn-sm btn-danger" onclick="deleteType('${t.id}')">✕</button>
+                    </div>
+                `).join('');
+        }
+        function closeTypeModal() { document.getElementById('typeModal').classList.remove('active'); }
+
+        async function addType() {
+            const name = document.getElementById('newTypeName').value.trim();
+            if (!name) { showToast('Ingresa un nombre', 'error'); return; }
+            if (productTypes.find(t => t.name === name)) { showToast('Ya existe', 'error'); return; }
+            const result = await apiCall('product_types.php', 'POST', { name });
+            if (result && result.status === 'ok') {
+                document.getElementById('newTypeName').value = '';
+                await loadData();
+                showToast(`Tipo "${name}" agregado`, 'success');
+            }
+        }
+
+        async function editTypePrompt(id, name) {
+            const newName = prompt('Nuevo nombre del tipo:', name);
+            if (!newName || newName.trim() === name) return;
+            const result = await apiCall('product_types.php', 'PUT', { id, name: newName.trim() });
+            if (result && result.status === 'ok') { await loadData(); showToast('Tipo actualizado', 'success'); }
+        }
+
+        async function deleteType(id) {
+            if (!confirm('Eliminar este tipo? Los productos de este tipo quedaran sin tipo.')) return;
+            const result = await apiCall('product_types.php?id=' + id, 'DELETE');
+            if (result && result.status === 'ok') {
+                await loadData();
+                showToast('Tipo eliminado', 'info');
+            }
+        }
 
         // CHARACTERISTICS
         function openCharModal() {

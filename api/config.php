@@ -24,9 +24,20 @@ if ($dbType === 'sqlite') {
         shoe_rack INTEGER DEFAULT 0, inner_storage INTEGER DEFAULT 0, shelf INTEGER DEFAULT 0,
         closures TEXT DEFAULT '[]', size_type TEXT DEFAULT '', dimensions TEXT DEFAULT '',
         assembly TEXT DEFAULT '', manual INTEGER DEFAULT 0, assembly_place TEXT DEFAULT '',
-        is_new INTEGER DEFAULT 1, created_at TEXT DEFAULT (datetime('now')),
+        is_new INTEGER DEFAULT 1, product_type TEXT DEFAULT '', created_at TEXT DEFAULT (datetime('now')),
         updated_at TEXT DEFAULT (datetime('now'))
     )");
+    $pdo->exec("CREATE TABLE IF NOT EXISTS product_types (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE,
+        created_at TEXT DEFAULT (datetime('now'))
+    )");
+    $insertType = $pdo->prepare("INSERT OR IGNORE INTO product_types (name) VALUES (?)");
+    foreach (['cama', 'mueble', 'otro'] as $t) { $insertType->execute([$t]); }
+    $cols = $pdo->query("PRAGMA table_info(products)")->fetchAll();
+    $cols = array_column($cols, 'name');
+    if (!in_array('product_type', $cols)) {
+        $pdo->exec("ALTER TABLE products ADD COLUMN product_type TEXT DEFAULT ''");
+    }
     $pdo->exec("CREATE TABLE IF NOT EXISTS product_colors (
         id INTEGER PRIMARY KEY AUTOINCREMENT, product_id TEXT NOT NULL,
         hex TEXT NOT NULL, name TEXT NOT NULL,
