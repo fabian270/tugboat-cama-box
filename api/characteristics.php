@@ -11,7 +11,7 @@ switch ($method) {
         echo json_encode($stmt->fetchAll());
         break;
     case 'POST':
-        requireAuth();
+        requireAdmin();
         $name = $input['name'] ?? '';
         $type = $input['type'] ?? 'text';
         $options = $input['options'] ?? null;
@@ -25,7 +25,7 @@ switch ($method) {
         echo json_encode(['status' => 'ok']);
         break;
     case 'DELETE':
-        requireAuth();
+        requireAdmin();
         $name = $_GET['name'] ?? '';
         if (!$name) { http_response_code(400); echo json_encode(['error' => 'name required']); break; }
         $pdo->prepare('DELETE FROM custom_characteristics WHERE name = ?')->execute([$name]);

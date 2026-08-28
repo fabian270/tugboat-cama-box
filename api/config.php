@@ -32,8 +32,6 @@ if ($dbType === 'sqlite') {
         id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL UNIQUE,
         created_at TEXT DEFAULT (datetime('now'))
     )");
-    $insertType = $pdo->prepare("INSERT OR IGNORE INTO product_types (name) VALUES (?)");
-    foreach (['cama', 'mueble', 'otro'] as $t) { $insertType->execute([$t]); }
     $cols = $pdo->query("PRAGMA table_info(products)")->fetchAll();
     $cols = array_column($cols, 'name');
     if (!in_array('product_type', $cols)) {

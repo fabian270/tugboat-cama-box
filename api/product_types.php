@@ -11,7 +11,7 @@ switch ($method) {
         echo json_encode($stmt->fetchAll());
         break;
     case 'POST':
-        requireAuth();
+        requireAdmin();
         $name = trim($input['name'] ?? '');
         if (!$name) { http_response_code(400); echo json_encode(['error' => 'name required']); break; }
         $stmt = $pdo->prepare('INSERT OR IGNORE INTO product_types (name) VALUES (?)');
@@ -20,7 +20,7 @@ switch ($method) {
         echo json_encode(['status' => 'ok', 'id' => $pdo->lastInsertId()]);
         break;
     case 'PUT':
-        requireAuth();
+        requireAdmin();
         $id = $input['id'] ?? '';
         $name = trim($input['name'] ?? '');
         if (!$id || !$name) { http_response_code(400); echo json_encode(['error' => 'id and name required']); break; }
@@ -30,7 +30,7 @@ switch ($method) {
         echo json_encode(['status' => 'ok']);
         break;
     case 'DELETE':
-        requireAuth();
+        requireAdmin();
         $id = $_GET['id'] ?? '';
         if (!$id) { http_response_code(400); echo json_encode(['error' => 'id required']); break; }
         $type = $pdo->prepare('SELECT name FROM product_types WHERE id = ?');

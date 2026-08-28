@@ -297,12 +297,13 @@
     <div class="modal-overlay" id="typeModal">
         <div class="modal" style="max-width:480px">
             <div class="modal-header">
-                <h2>Gestionar Tipos</h2>
+                <h2 id="typeModalTitle">Nuevo Tipo</h2>
                 <button class="modal-close" onclick="closeTypeModal()">✕</button>
             </div>
             <div class="modal-body">
+                <input type="hidden" id="editTypeId">
                 <div class="form-group"><label>Nombre</label><input type="text" id="newTypeName" placeholder="Ej: cama, mueble, otro"></div>
-                <button class="btn btn-sm btn-accent" style="margin-top:12px" onclick="addType()">+ Agregar</button>
+                <button class="btn btn-sm btn-accent" style="margin-top:12px" id="typeSaveBtn" onclick="saveType()">+ Agregar</button>
                 <div class="char-list" id="typeList"></div>
             </div>
         </div>
@@ -320,6 +321,7 @@
         let productColors = [];
         let dynamicFeatureRows = [];
         let productTypes = [];
+        let activeTab = 'products';
 
         async function apiCall(endpoint, method, body) {
             const opts = { method: method || 'GET', headers: {} };
@@ -404,6 +406,7 @@
                 if (u !== null) users = u;
             }
             renderAdminContent();
+            switchTab(activeTab);
         }
 
         function renderAdminContent() {
@@ -417,21 +420,21 @@
                 </div>
                 <div class="tabs">
                     <button class="tab-btn active" data-tab="products" onclick="switchTab('products')">Productos</button>
-                    <button class="tab-btn" data-tab="types" onclick="switchTab('types')">Tipos</button>
-                    <button class="tab-btn" data-tab="chars" onclick="switchTab('chars')">Caracteristicas</button>
+                    ${isAdmin ? `<button class="tab-btn" data-tab="types" onclick="switchTab('types')">Tipos</button>` : ''}
+                    ${isAdmin ? `<button class="tab-btn" data-tab="chars" onclick="switchTab('chars')">Caracteristicas</button>` : ''}
                     ${isAdmin ? `<button class="tab-btn" data-tab="users" onclick="switchTab('users')">Usuarios</button>` : ''}
                 </div>
                 <div class="toolbar"><div class="toolbar-left" id="toolbarActions"></div></div>
                 <div class="tab-content active" id="tab-products">
                     <div class="product-list" id="productList"></div>
                 </div>
-                <div class="tab-content" id="tab-types"><div id="typeListContent"></div></div>
-                <div class="tab-content" id="tab-chars"><div id="charListContent"></div></div>
+                ${isAdmin ? `<div class="tab-content" id="tab-types"><div id="typeListContent"></div></div>` : ''}
+                ${isAdmin ? `<div class="tab-content" id="tab-chars"><div id="charListContent"></div></div>` : ''}
                 ${isAdmin ? `<div class="tab-content" id="tab-users"><div id="userListContent"></div></div>` : ''}
             `;
             renderProductList();
-            renderTypeList();
-            renderCharTab();
+            if (isAdmin) renderTypeList();
+            if (isAdmin) renderCharTab();
             if (isAdmin) renderUserList();
             renderToolbar('products');
         }
@@ -439,11 +442,13 @@
         function renderToolbar(tab) {
             const el = document.getElementById('toolbarActions');
             if (!el) return;
+            const isAdmin = currentUser.role === 'admin';
+            const adminBtns = isAdmin ? `<button class="btn btn-outline btn-sm" onclick="exportData()">↓ Exportar</button>
+                    <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFile').click()">↑ Importar</button>
+                    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">` : '';
             const btns = {
                 products: `<button class="btn btn-accent" onclick="openProductModal()">+ Nuevo Producto</button>
-                    <button class="btn btn-outline btn-sm" onclick="exportData()">↓ Exportar</button>
-                    <button class="btn btn-outline btn-sm" onclick="document.getElementById('importFile').click()">↑ Importar</button>
-                    <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">`,
+                    ${adminBtns}`,
                 types: `<button class="btn btn-accent" onclick="openTypeModal()">+ Nuevo Tipo</button>`,
                 chars: `<button class="btn btn-accent" onclick="openCharModal()">+ Agregar Caracteristica</button>`,
                 users: `<button class="btn btn-accent" onclick="openUserModal()">+ Nuevo Usuario</button>`
@@ -452,9 +457,11 @@
         }
 
         function switchTab(tab) {
+            activeTab = tab;
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.toggle('active', b.dataset.tab === tab));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
-            document.getElementById('tab-' + tab).classList.add('active');
+            const target = document.getElementById('tab-' + tab);
+            if (target) target.classList.add('active');
             renderToolbar(tab);
         }
 
@@ -707,6 +714,7 @@
                         : productTypes.map(t => `
                             <div class="char-item">
                                 <div><span class="char-name">${t.name}</span></div>
+                                <button class="btn btn-sm" style="background:var(--info);color:white" onclick="openEditTypeModal('${t.id}','${t.name.replace(/'/g,"\\'")}')">✎</button>
                                 <button class="btn btn-sm btn-danger" onclick="deleteType('${t.id}')">✕</button>
                             </div>
                         `).join('')}
@@ -714,37 +722,61 @@
         }
 
         function openTypeModal() {
-            document.getElementById('typeModal').classList.add('active');
+            document.getElementById('editTypeId').value = '';
+            document.getElementById('typeModalTitle').textContent = 'Nuevo Tipo';
             document.getElementById('newTypeName').value = '';
+            document.getElementById('typeSaveBtn').textContent = '+ Agregar';
+            document.getElementById('typeModal').classList.add('active');
+            renderTypeModalList();
+        }
+
+        function openEditTypeModal(id, name) {
+            document.getElementById('editTypeId').value = id;
+            document.getElementById('typeModalTitle').textContent = 'Editar Tipo';
+            document.getElementById('newTypeName').value = name;
+            document.getElementById('typeSaveBtn').textContent = 'Guardar cambios';
+            document.getElementById('typeModal').classList.add('active');
+            renderTypeModalList();
+        }
+
+        function renderTypeModalList() {
             document.getElementById('typeList').innerHTML = productTypes.length === 0
                 ? '<p style="color:var(--text-light);font-size:0.85rem;text-align:center;padding:20px">No hay tipos</p>'
                 : productTypes.map(t => `
                     <div class="char-item">
                         <div><span class="char-name">${t.name}</span></div>
-                        <button class="btn btn-sm" style="background:var(--info);color:white" onclick="editTypePrompt('${t.id}','${t.name.replace(/'/g,"\\'")}')">✎</button>
+                        <button class="btn btn-sm" style="background:var(--info);color:white" onclick="openEditTypeModal('${t.id}','${t.name.replace(/'/g,"\\'")}')">✎</button>
                         <button class="btn btn-sm btn-danger" onclick="deleteType('${t.id}')">✕</button>
                     </div>
                 `).join('');
         }
+
         function closeTypeModal() { document.getElementById('typeModal').classList.remove('active'); }
 
-        async function addType() {
+        async function saveType() {
+            const id = document.getElementById('editTypeId').value;
             const name = document.getElementById('newTypeName').value.trim();
             if (!name) { showToast('Ingresa un nombre', 'error'); return; }
-            if (productTypes.find(t => t.name === name)) { showToast('Ya existe', 'error'); return; }
-            const result = await apiCall('product_types.php', 'POST', { name });
-            if (result && result.status === 'ok') {
-                document.getElementById('newTypeName').value = '';
-                await loadData();
-                showToast(`Tipo "${name}" agregado`, 'success');
+            if (id) {
+                const existing = productTypes.find(t => t.id !== id && t.name === name);
+                if (existing) { showToast('Ya existe un tipo con ese nombre', 'error'); return; }
+                const result = await apiCall('product_types.php', 'PUT', { id, name });
+                if (result && result.status === 'ok') {
+                    const oldName = productTypes.find(t => t.id === id)?.name || '';
+                    await loadData();
+                    showToast(`Tipo "${oldName}" actualizado a "${name}"`, 'success');
+                }
+            } else {
+                if (productTypes.find(t => t.name === name)) { showToast('Ya existe', 'error'); return; }
+                const result = await apiCall('product_types.php', 'POST', { name });
+                if (result && result.status === 'ok') {
+                    document.getElementById('newTypeName').value = '';
+                    await loadData();
+                    showToast(`Tipo "${name}" agregado`, 'success');
+                }
             }
-        }
-
-        async function editTypePrompt(id, name) {
-            const newName = prompt('Nuevo nombre del tipo:', name);
-            if (!newName || newName.trim() === name) return;
-            const result = await apiCall('product_types.php', 'PUT', { id, name: newName.trim() });
-            if (result && result.status === 'ok') { await loadData(); showToast('Tipo actualizado', 'success'); }
+            renderTypeModalList();
+            renderTypeList();
         }
 
         async function deleteType(id) {

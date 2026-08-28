@@ -85,9 +85,6 @@ try {
         foreach ($types as $t) {
             if (!empty($t['name'])) $insType->execute([$t['name']]);
         }
-        if ($isSqlite && !$types) {
-            foreach (['cama', 'mueble', 'otro'] as $t) { $insType->execute([$t]); }
-        }
 
         foreach ($products as $p) {
             importSaveProduct($pdo, $p);
