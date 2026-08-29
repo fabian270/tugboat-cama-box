@@ -1,3 +1,21 @@
+<?php
+$CONFIG_PATH = __DIR__ . '/api/config.php';
+$PRODS_FN = __DIR__ . '/api/products_functions.php';
+if (file_exists($CONFIG_PATH)) {
+    try {
+        require $CONFIG_PATH;
+        if (file_exists($PRODS_FN)) require $PRODS_FN;
+        $SSR_PRODUCTS = function_exists('getProducts') ? getProducts($pdo) : [];
+        $SSR_CHARS = $pdo->query('SELECT * FROM custom_characteristics ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $SSR_PRODUCTS = [];
+        $SSR_CHARS = [];
+    }
+} else {
+    $SSR_PRODUCTS = [];
+    $SSR_CHARS = [];
+}
+?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
@@ -465,15 +483,15 @@
 
     <script>
         const API_BASE = '/api';
-        let products = [];
-        let customCharacteristics = [];
+        let products = <?= json_encode($SSR_PRODUCTS) ?>;
+        let customCharacteristics = <?= json_encode($SSR_CHARS) ?>;
         let compareList = [];
         let currentView = 'grid';
         let currentImageIndices = {};
 
         function init() {
-            loadData();
             setupSearch();
+            render();
         }
 
         async function apiCall(endpoint, method, body) {
