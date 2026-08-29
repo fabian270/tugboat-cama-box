@@ -4,6 +4,7 @@ $PRODS_FN = __DIR__ . '/api/products_functions.php';
 if (file_exists($CONFIG_PATH)) {
     try {
         require $CONFIG_PATH;
+        header('Content-Type: text/html; charset=utf-8');
         if (file_exists($PRODS_FN)) require $PRODS_FN;
         $SSR_PRODUCTS = function_exists('getProducts') ? getProducts($pdo) : [];
         $SSR_CHARS = $pdo->query('SELECT * FROM custom_characteristics ORDER BY id')->fetchAll(PDO::FETCH_ASSOC);
