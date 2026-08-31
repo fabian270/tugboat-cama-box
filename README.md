@@ -174,3 +174,10 @@ El `Dockerfile` y `docker-compose.yml` pueden adaptarse a cualquier infraestruct
   ]
 }
 ```
+
+## Técnica
+
+Esta aplicación fue creada utilizando inteligencia artificial como asistente de desarrollo. Las herramientas utilizadas fueron:
+
+- **OpenCode** — agente de IA para terminal que interactúa con el código, ejecuta comandos, lee/escribe archivos y gestiona el flujo de trabajo
+- **Big Pickle** — modelo de IA principal que actuó como agente de codificación, generando y depurando todo el código del proyecto
